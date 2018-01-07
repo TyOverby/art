@@ -1,31 +1,36 @@
 {
   "name": "art-watch",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "server": "ts-node server.ts",
-    "client": "parcel watch index.html",
+    "prepublish": "parcel build ./index.html && tsc server.ts",
+    "run-server": "ts-node server.ts",
+    "watch-client": "parcel watch index.html",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "bin": {
+    "artwatch": "./server.js"
+  },
+  "files": [
+    "server.js",
+    "dist/index.html",
+    "dist/*.js",
+  ],
   "author": "",
   "license": "ISC",
   "description": "",
+  "dependencies": {
+    "watch": "1.0.2",
+    "websocket": "1.0.25"
+  },
   "devDependencies": {
     "@types/express": "4.11.0",
     "@types/node": "8.5.7",
     "@types/watch": "1.0.0",
     "@types/websocket": "0.0.35",
-    "babel-plugin-transform-es2015-arrow-functions": "^6.22.0",
-    "babel-plugin-transform-es2015-block-scoping": "^6.26.0",
-    "babel-plugin-transform-es2015-template-literals": "^6.22.0",
-    "bufferutil": "^3.0.3",
     "express": "4.16.2",
     "parcel-bundler": "1.4.1",
     "ts-node": "4.1.0",
-    "typescript": "2.6.2",
-    "utf-8-validate": "^4.0.0",
-    "watch": "1.0.2",
-    "websocket": "1.0.25"
-  },
-  "dependencies": {}
+    "typescript": "2.6.2"
+  }
 }
