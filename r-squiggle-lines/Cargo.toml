@@ -1,0 +1,12 @@
+[package]
+name = "r-squiggle-lines"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[[bin]]
+name = "r-squiggle-lines"
+path = "./src/main.rs"
+
+[dependencies]
+rand = "*"
+vectorphile = "0.1.6"
