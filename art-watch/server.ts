@@ -1,4 +1,4 @@
-#!node
+#!/usr/bin/env node
 import * as fs from "fs";
 import { server as ws_server } from "websocket";
 import * as http from "http";
