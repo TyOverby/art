@@ -7,21 +7,21 @@ use std::io::BufWriter;
 use rand::Rng;
 
 const COUNT_DOWN: usize = 200;
-const COUNT_ACROSS: usize = 500;
+const COUNT_ACROSS: usize = 200;
 
 const LEFT_OFFSET: f32 = 10.0;
 const TOP_OFFSET: f32 = 10.0;
 
-const IMPULSE_X_RAND: f32 = 0.050;
+const IMPULSE_X_RAND: f32 = 0.5;
 const IMPULSE_Y_RAND: f32 = 0.001;
 
-const VEL_X_RAND: f32 = 0.001;
-const VEL_Y_RAND: f32 = 0.001;
+const VEL_X_RAND: f32 = 0.100;
+const VEL_Y_RAND: f32 = 0.100;
 
-const ACC_X_RAND: f32 = 20.0;
+const ACC_X_RAND: f32 = 2.0;
 const ACC_Y_RAND: f32 = 0.001;
 
-const X_GAP: f32 = 15.0;
+const X_GAP: f32 = 10.0;
 const Y_GAP: f32 = 10.0;
 
 struct Strand {
@@ -38,21 +38,23 @@ fn initial_strand() -> Strand {
     for i in 0..COUNT_DOWN {
         positions.push((
             LEFT_OFFSET + rand::thread_rng().gen_range(-IMPULSE_X_RAND, IMPULSE_X_RAND),
-            TOP_OFFSET + i as f32 * Y_GAP
-                + rand::thread_rng().gen_range(-IMPULSE_Y_RAND, IMPULSE_Y_RAND),
+            TOP_OFFSET + i as f32 * Y_GAP,
+               // + rand::thread_rng().gen_range(-IMPULSE_Y_RAND, IMPULSE_Y_RAND),
         ));
         velocities.push((
-            rand::thread_rng().gen_range(-VEL_X_RAND, VEL_X_RAND),
-            rand::thread_rng().gen_range(-VEL_Y_RAND, VEL_Y_RAND),
+            rand::thread_rng().gen_range(0.0, VEL_X_RAND),
+            rand::thread_rng().gen_range(0.0, VEL_Y_RAND),
         ));
-        accelerations.push((
+        accelerations.push(
+            (0.0, 0.0), /*(
             rand::thread_rng().gen_range(-ACC_X_RAND, ACC_X_RAND),
             rand::thread_rng().gen_range(-ACC_Y_RAND, ACC_Y_RAND),
-        ));
+        )*/
+        );
     }
 
     let velocities = smooth(&smooth(&velocities));
-    //let accelerations = smooth(&accelerations);
+    let accelerations = smooth(&smooth(&accelerations));
 
     return Strand {
         positions,
@@ -62,16 +64,17 @@ fn initial_strand() -> Strand {
 }
 
 fn get_strand(iteration: usize, last_strand: &Strand) -> Strand {
-    let mut positions = vec![];
-    for i in 0..COUNT_DOWN {
-        if i == 0 {}
-        positions.push((
-            LEFT_OFFSET + X_GAP * iteration as f32 + last_strand.velocities[i].0
-                + rand::thread_rng().gen_range(-IMPULSE_X_RAND, IMPULSE_X_RAND),
-            TOP_OFFSET + i as f32 * Y_GAP + last_strand.velocities[i].1
-                + rand::thread_rng().gen_range(-IMPULSE_X_RAND, IMPULSE_X_RAND),
-        ));
-    }
+    let positions: Vec<_> = last_strand
+        .positions
+        .iter()
+        .zip(last_strand.velocities.iter())
+        .map(|(&(p_last_x, p_last_y), &(v_last_x, v_last_y))| {
+            (
+                p_last_x + X_GAP + rand::thread_rng().gen_range(-IMPULSE_X_RAND, IMPULSE_X_RAND) + v_last_x,
+                p_last_y, // + rand::thread_rng().gen_range(-IMPULSE_X_RAND, IMPULSE_X_RAND),
+            )
+        })
+        .collect();
 
     let velocities: Vec<_> = last_strand
         .velocities
@@ -84,8 +87,13 @@ fn get_strand(iteration: usize, last_strand: &Strand) -> Strand {
             )
         })
         .collect();
-    let velocities = smooth(&smooth(&velocities));
-    let accelerations = smooth(&smooth(&last_strand.accelerations));
+    let accelerations: Vec<_> = last_strand
+        .velocities
+        .iter()
+        .map(|&(a_last_x, a_last_y)| (a_last_x, a_last_y))
+        .collect();
+
+    let velocities = smooth(&velocities);
 
     return Strand {
         positions,
