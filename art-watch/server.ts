@@ -25,7 +25,18 @@ function launchWebsocket() {
         });
     });
 
-    server.listen(1999);
+    const websocket_port = 1999;
+    try {
+        server.listen(websocket_port, undefined, undefined, (error: any) => {
+            if (error) {
+                console.log(`failed to attach to port ${websocket_port}`);
+            } else {
+                console.log(`listening on ws://localhost:${websocket_port}/`);
+            }
+        });
+    } catch {
+        console.log(`failed to attach to port ${websocket_port}`);
+    }
 }
 
 function launchServer() {
@@ -51,7 +62,7 @@ function launchServer() {
         });
     });
 
-    app.get('/index.html', (req, res) => {
+    app.get(['/', '/index.html'], (req, res) => {
         res.type(".html");
         fs.readFile(__dirname + "/dist/index.html", (err, data) => {
             if (err) { throw err; }
@@ -61,7 +72,20 @@ function launchServer() {
     app.use('/', express.static("./"));
 
     launchWebsocket();
-    server.listen(8080);
+
+    const port = 8080;
+    try {
+        server.listen(port, undefined, undefined, (error: any) => {
+            if (error) {
+                console.log(`failed to attach to port ${port}`);
+            } else {
+                console.log(`UI on http://localhost:${port}/`);
+            }
+        });
+    }
+    catch {
+        console.log(`failed to attach to port ${port}`);
+    }
 }
 
 launchServer();
