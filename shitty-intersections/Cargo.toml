@@ -8,3 +8,6 @@ name = "shitty-intersections"
 path = "src/main.rs"
 
 [dependencies]
+vectorphile = "*"
+rand = "*"
+euclid = "*"
