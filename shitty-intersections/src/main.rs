@@ -6,16 +6,25 @@ use std::fs::File;
 use std::io::BufWriter;
 use vectorphile::Canvas;
 use vectorphile::backend::{DrawBackend, DrawOptions};
-use euclid::{UnknownUnit, vec2};
+use euclid::{UnknownUnit, point2, vec2};
 
 const RADIUS: f32 = 100.0;
 const GAP: f32 = RADIUS / 2.0;
-const NUM_AUX: u32 = 3;
+const NUM_AUX: u32 = 4;
 const X_COUNT: u32 = 5;
 const Y_COUNT: u32 = 5;
+const DASH_DIST: f32 = 10.0;
 const LINE_GAP: f32 = 3.0;
-const BIG_COUNT: u32 = 4;
-const SMALL_COUNT: u32 = 2;
+const BIG_PATTERN: &[LineStyle] = &[Full, Dashed, Full, Blank, Full, Dashed, Full];
+const SMALL_PATTERN: &[LineStyle] = &[Full, Full, Dashed, Full, Full];
+
+#[derive(Clone, Copy)]
+enum LineStyle {
+    Blank,
+    Dashed,
+    Full,
+}
+use LineStyle::*;
 
 fn random_point_on_circle(radius: f32, x: f32, y: f32) -> (f32, f32) {
     let angle: f32 = rand::random::<f32>() * 3.14159 * 2.0;
@@ -64,50 +73,79 @@ fn dupe_line_next(((x1, y1), (x2, y2)): ((f32, f32), (f32, f32))) -> ((f32, f32)
     ((x1 + lv.x, y1 + lv.y), (x2 + lv.x, y2 + lv.y))
 }
 
-fn draw_line<B: DrawBackend>(
-    (p1, p2): ((f32, f32), (f32, f32)),
-    count: u32,
+fn draw_dashed<B: DrawBackend>(
+    p1: (f32, f32),
+    p2: (f32, f32),
     options: DrawOptions,
-    collide: Option<((f32, f32), (f32, f32))>,
     canvas: &mut Canvas<B>,
 ) -> Result<(), B::Error> {
-    let twist = |a, b| if count % 2 == 0 { (a, b) } else { (b, a) };
-    let collision_left = collide.and_then(|c_target| get_line_intersection(c_target, (p1, p2)));
-    let collision_right = collide
-        .map(dupe_line_next)
-        .map(dupe_line_next)
-        .map(dupe_line_next)
-        .map(dupe_line_next)
-        .and_then(|c_target| get_line_intersection(c_target, (p1, p2)));
+    if dist_between_points(p1, p2) < DASH_DIST {
+        return Ok(());
+    }
 
-    let collision = match (collision_left, collision_right) {
-        (Some(l), Some(r)) => if dist_between_points(p1, l) < dist_between_points(p1, r) {
-            Some(l)
-        } else {
-            Some(r)
-        },
-        (a @ Some(_), None) => a,
-        (None, b @ Some(_)) => b,
-        _ => None,
+    let p1 = point2::<_, UnknownUnit>(p1.0, p1.1);
+    let p2 = point2::<_, UnknownUnit>(p2.0, p2.1);
+    let v = p2 - p1;
+    let v = v.normalize() * DASH_DIST;
+    let p2_extended = p1 + v;
+    let p2_out = p1 + v * 2.0;
+
+    canvas.draw_line((p1.x, p1.y), (p2_extended.x, p2_extended.y), Some(options))?;
+    draw_dashed((p2_out.x, p2_out.y), (p2.x, p2.y), options, canvas)
+}
+
+fn draw_line<B: DrawBackend>(
+    (p1, p2): ((f32, f32), (f32, f32)),
+    style: &[LineStyle],
+    options: DrawOptions,
+    canvas: &mut Canvas<B>,
+    drawn_lines: &mut Vec<((f32, f32), (f32, f32))>,
+) -> Result<(), B::Error> {
+    let twist = |a, b| if style.len() % 2 == 0 { (a, b) } else { (b, a) };
+
+    let current_style = if style.len() == 0 {
+        return Ok(());
+    } else {
+        style[0]
     };
+
+    let mut collision = None;
+    let mut shortest_dist = ::std::f32::INFINITY;
+    for prev_drawn in &drawn_lines[..] {
+        if let Some(intersection) = get_line_intersection((p1, p2), *prev_drawn) {
+            let dst = dist_between_points(p1, intersection);
+            if dst < shortest_dist {
+                collision = Some(intersection);
+                shortest_dist = dst;
+            }
+        }
+    }
 
     if let Some(intersection_point) = collision {
         let (a, b) = twist(p1, intersection_point);
-        canvas.draw_line(a, b, Some(options))?;
+        match current_style {
+            Blank => {}
+            Dashed => draw_dashed(a, b, options, canvas)?,
+            Full => canvas.draw_line(a, b, Some(options))?,
+        }
+        drawn_lines.push((a, b));
     } else {
         let (a, b) = twist(p1, p2);
-        canvas.draw_line(a, b, Some(options))?;
+        match current_style {
+            Blank => {}
+            Dashed => draw_dashed(a, b, options, canvas)?,
+            Full => canvas.draw_line(a, b, Some(options))?,
+        }
+        drawn_lines.push((a, b));
     }
 
-    if count != 0 {
-        draw_line(
-            dupe_line_next((p1, p2)),
-            count - 1,
-            options,
-            collide,
-            canvas,
-        )?;
-    }
+    draw_line(
+        dupe_line_next((p1, p2)),
+        &style[1..],
+        options,
+        canvas,
+        drawn_lines,
+    )?;
     Ok(())
 }
 
@@ -126,7 +164,15 @@ fn generate_intersection<B: DrawBackend>(
         second = random_point_on_circle(RADIUS, x, y);
     }
 
-    draw_line((first, second), BIG_COUNT, draw_options, None, canvas)?;
+    let mut drawn_lines = vec![];
+
+    draw_line(
+        (first, second),
+        BIG_PATTERN,
+        draw_options,
+        canvas,
+        &mut drawn_lines,
+    )?;
 
     let mut num_found = 0;
     loop {
@@ -141,10 +187,10 @@ fn generate_intersection<B: DrawBackend>(
                 num_found += 1;
                 draw_line(
                     (p1, p2),
-                    SMALL_COUNT,
+                    SMALL_PATTERN,
                     draw_options,
-                    Some((first, second)),
                     canvas,
+                    &mut drawn_lines,
                 )?;
             }
         }
