@@ -1,5 +1,5 @@
 const ws = new WebSocket("ws://localhost:1999");
-const container = document.querySelector("#container")!;
+const container = document.querySelector("body")!;
 
 ws.onopen = function () {
     console.log("opened!");

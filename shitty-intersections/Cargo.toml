@@ -1,0 +1,13 @@
+[package]
+name = "shitty-intersections"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[[bin]]
+name = "shitty-intersections"
+path = "src/main.rs"
+
+[dependencies]
+vectorphile = "*"
+rand = "*"
+euclid = "*"
