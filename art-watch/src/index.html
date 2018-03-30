@@ -14,6 +14,7 @@
             display: grid;
         }
 
+        #message,
         img {
             margin: auto;
             width: auto;
@@ -22,11 +23,20 @@
             max-height: 90vh;
             box-shadow: 0px 0px 10px black;
         }
+
+        #message {
+            padding: 20px;
+            max-width: 50vw;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif
+        }
     </style>
 </head>
 
 <body>
-    <div id="container"></div>
+    <div id="message">
+        <h2>No Art To Display Yet!</h2>
+        <h4>The next time you modify or create a svg, png, or jpeg file in the current directory it will be displayed here!</h4>
+    </div>
     <script src="./client.ts"></script>
 </body>
 

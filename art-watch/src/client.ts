@@ -5,7 +5,7 @@ ws.onopen = function () {
     this.onmessage = (message) => {
         const filename: string = message.data;
         console.log(filename);
-        if (/\.(svg|png|jpg)$/.test(filename)) {
+        if (/\.(svg|png|jpg|jpeg)$/.test(filename)) {
             const rand = Math.random();
             container.innerHTML = `<img src="${filename}?${rand}" />`;
         }
