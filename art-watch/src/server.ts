@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import * as fs from "fs";
 import { server as ws_server } from "websocket";
 import * as http from "http";
@@ -41,7 +42,6 @@ function launchServer() {
         res.send({ msg: "hello" });
     });
 
-    //app.use('/dist/', express.static(__dirname + "/dist/"));
     app.get(/dist\/.*.js/, (req, res) => {
         res.type(".js");
         console.log("requesting " + req.path);

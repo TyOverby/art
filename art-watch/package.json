@@ -1,6 +1,6 @@
 {
   "name": "art-watch",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "server.js",
   "scripts": {
     "prepublish": "parcel build ./src/index.html && tsc ./src/server.ts --outDir ./dist",
