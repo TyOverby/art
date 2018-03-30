@@ -45,19 +45,20 @@ function launchServer() {
     app.get(/dist\/.*.js/, (req, res) => {
         res.type(".js");
         console.log("requesting " + req.path);
-        fs.readFile(__dirname + req.path, (err, data) => {
+        fs.readFile("." + req.path, (err, data) => {
             if (err) { throw err; }
             res.write(data, () => res.end());
         });
     });
 
-    app.get('/index.html', (req, res) => {
+    app.get(['/index.html', '/'], (req, res) => {
         res.type(".html");
-        fs.readFile(__dirname + "/dist/index.html", (err, data) => {
+        fs.readFile(__dirname + "/index.html", (err, data) => {
             if (err) { throw err; }
             res.write(data, () => res.end());
         });
     });
+
     app.use('/', express.static("./"));
 
     launchWebsocket();
