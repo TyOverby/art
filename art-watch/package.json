@@ -3,8 +3,9 @@
   "version": "1.0.5",
   "main": "server.js",
   "scripts": {
-    "prepublish": "parcel build ./src/index.html && tsc ./src/server.ts --outDir ./dist",
-    "run-server": "ts-node ./src/server.ts",
+    "build-server": "tsc ./src/server.ts --outDir ./dist",
+    "prepublish": "parcel build ./src/index.html && npm run build-server",
+    "run-server": "npm run build-server && ./dist/server.js",
     "watch-client": "parcel watch ./src/index.html"
   },
   "bin": {

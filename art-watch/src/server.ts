@@ -63,6 +63,7 @@ function launchServer() {
 
     launchWebsocket();
     server.listen(8080);
+    console.log("listening on http://localhost:8080");
 }
 
 launchServer();
