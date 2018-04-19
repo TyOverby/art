@@ -3,16 +3,15 @@
   "version": "1.0.5",
   "main": "server.js",
   "scripts": {
-    "prepublish": "parcel build ./index.html && tsc server.ts",
-    "run-server": "ts-node server.ts",
-    "watch-client": "parcel watch index.html",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublish": "parcel build ./src/index.html && tsc ./src/server.ts --outDir ./dist",
+    "run-server": "ts-node ./src/server.ts",
+    "watch-client": "parcel watch ./src/index.html"
   },
   "bin": {
-    "artwatch": "./server.js"
+    "artwatch": "./dist/server.js"
   },
   "files": [
-    "server.js",
+    "dist/server.js",
     "dist/index.html",
     "dist/*.js"
   ],

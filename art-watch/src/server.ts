@@ -1,4 +1,5 @@
-#!node
+#!/usr/bin/env node
+
 import * as fs from "fs";
 import { server as ws_server } from "websocket";
 import * as http from "http";
@@ -25,18 +26,7 @@ function launchWebsocket() {
         });
     });
 
-    const websocket_port = 1999;
-    try {
-        server.listen(websocket_port, undefined, undefined, (error: any) => {
-            if (error) {
-                console.log(`failed to attach to port ${websocket_port}`);
-            } else {
-                console.log(`listening on ws://localhost:${websocket_port}/`);
-            }
-        });
-    } catch {
-        console.log(`failed to attach to port ${websocket_port}`);
-    }
+    server.listen(1999);
 }
 
 function launchServer() {
@@ -52,40 +42,27 @@ function launchServer() {
         res.send({ msg: "hello" });
     });
 
-    //app.use('/dist/', express.static(__dirname + "/dist/"));
     app.get(/dist\/.*.js/, (req, res) => {
         res.type(".js");
         console.log("requesting " + req.path);
-        fs.readFile(__dirname + req.path, (err, data) => {
+        fs.readFile("." + req.path, (err, data) => {
             if (err) { throw err; }
             res.write(data, () => res.end());
         });
     });
 
-    app.get(['/', '/index.html'], (req, res) => {
+    app.get(['/index.html', '/'], (req, res) => {
         res.type(".html");
-        fs.readFile(__dirname + "/dist/index.html", (err, data) => {
+        fs.readFile(__dirname + "/index.html", (err, data) => {
             if (err) { throw err; }
             res.write(data, () => res.end());
         });
     });
+
     app.use('/', express.static("./"));
 
     launchWebsocket();
-
-    const port = 8080;
-    try {
-        server.listen(port, undefined, undefined, (error: any) => {
-            if (error) {
-                console.log(`failed to attach to port ${port}`);
-            } else {
-                console.log(`UI on http://localhost:${port}/`);
-            }
-        });
-    }
-    catch {
-        console.log(`failed to attach to port ${port}`);
-    }
+    server.listen(8080);
 }
 
 launchServer();

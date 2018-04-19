@@ -2,8 +2,6 @@ const ws = new WebSocket("ws://localhost:1999");
 const container = document.querySelector("body")!;
 
 ws.onopen = function () {
-    console.log("opened!");
-
     this.onmessage = (message) => {
         const filename: string = message.data;
         console.log(filename);
