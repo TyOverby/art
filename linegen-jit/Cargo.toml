@@ -1,0 +1,12 @@
+[package]
+name = "linegen-jit"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[dependencies]
+cretonne = "0.8.0"
+cretonne-module = "0.8.0"
+cretonne-simplejit = "0.8.0"
+cretonne-codegen = "0.8.0"
+rand = "0.4.2"
+vectorphile = "*"
