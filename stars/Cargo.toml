@@ -1,0 +1,14 @@
+[package]
+name = "stars"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[[bin]]
+path = "src/main.rs"
+name = "stars"
+
+[dependencies]
+csv = "1.0.0-beta.5"
+vectorphile = "*"
+serde_derive = "1.*.*"
+serde= "1.*.*"
