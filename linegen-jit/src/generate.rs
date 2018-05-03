@@ -23,11 +23,11 @@ pub(crate) fn get<'b, R: Rng>(rng: &'b mut R) -> Expr {
         &[
             (
                 3.0,
-                Box::new(|_: &'b mut _| Expr::X) as Box<Fn(&'b mut R) -> Expr>,
+                Box::new(|_: &'b mut _| Expr::A) as Box<Fn(&'b mut R) -> Expr>,
             ),
             (
                 3.0,
-                Box::new(|_: &'b mut _| Expr::Y) as Box<Fn(&'b mut R) -> Expr>,
+                Box::new(|_: &'b mut _| Expr::B) as Box<Fn(&'b mut R) -> Expr>,
             ),
             (
                 1.0,

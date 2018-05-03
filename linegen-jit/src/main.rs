@@ -19,11 +19,11 @@ use std::io::BufWriter;
 use vectorphile::svg::SvgBackend;
 use vectorphile::Canvas;
 
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 enum Expr {
     Zero,
-    X,
-    Y,
+    A,
+    B,
     Or(Box<Expr>, Box<Expr>),
     And(Box<Expr>, Box<Expr>),
     Xor(Box<Expr>, Box<Expr>),
@@ -40,8 +40,8 @@ impl Expr {
 
         match self {
             &Zero => (false, false),
-            &X => (true, false),
-            &Y => (false, true),
+            &A => (true, false),
+            &B => (false, true),
             &Or(ref a, ref b) => or(a.info(), b.info()),
             &And(ref a, ref b) => or(a.info(), b.info()),
             &Xor(ref a, ref b) => or(a.info(), b.info()),
@@ -54,8 +54,8 @@ impl Expr {
         use Expr::*;
         match self {
             Zero => Zero,
-            X => X,
-            Y => Y,
+            A => A,
+            B => B,
             And(a, b) => match (a.simplify(), b.simplify()) {
                 (Zero, _) => Zero,
                 (_, Zero) => Zero,
@@ -135,8 +135,8 @@ fn compile_expr(
     builder: &mut FunctionBuilder<Variable>,
 ) -> Value {
     match expr {
-        Expr::X => builder.use_var(x),
-        Expr::Y => builder.use_var(y),
+        Expr::A => builder.use_var(x),
+        Expr::B => builder.use_var(y),
         Expr::And(l, r) => {
             let l = compile_expr(*l, x, y, u255, builder);
             let r = compile_expr(*r, x, y, u255, builder);
@@ -187,22 +187,22 @@ fn declare_variables(
 
 #[test]
 fn test_x() {
-    assert_eq!(compile(Expr::X)(5, 6), 5);
+    assert_eq!(compile(Expr::A)(5, 6), 5);
 }
 
 #[test]
 fn test_y() {
-    assert_eq!(compile(Expr::Y)(5, 6), 6);
+    assert_eq!(compile(Expr::B)(5, 6), 6);
 }
 
 #[test]
 fn test_and() {
     assert_eq!(
-        compile(Expr::And(Box::new(Expr::X), Box::new(Expr::Y)))(5, 4),
+        compile(Expr::And(Box::new(Expr::A), Box::new(Expr::B)))(5, 4),
         5 & 4
     );
     assert_eq!(
-        compile(Expr::And(Box::new(Expr::X), Box::new(Expr::Y)))(999, 2 * 2 * 2),
+        compile(Expr::And(Box::new(Expr::A), Box::new(Expr::B)))(999, 2 * 2 * 2),
         999 & (2 * 2 * 2)
     );
 }
@@ -210,11 +210,11 @@ fn test_and() {
 #[test]
 fn test_or() {
     assert_eq!(
-        compile(Expr::Or(Box::new(Expr::X), Box::new(Expr::Y)))(5, 4),
+        compile(Expr::Or(Box::new(Expr::A), Box::new(Expr::B)))(5, 4),
         5 | 4
     );
     assert_eq!(
-        compile(Expr::Or(Box::new(Expr::X), Box::new(Expr::Y)))(999, 2 * 2 * 2),
+        compile(Expr::Or(Box::new(Expr::A), Box::new(Expr::B)))(999, 2 * 2 * 2),
         999 | (2 * 2 * 2)
     );
 }
@@ -222,11 +222,11 @@ fn test_or() {
 #[test]
 fn test_xor() {
     assert_eq!(
-        compile(Expr::Xor(Box::new(Expr::X), Box::new(Expr::Y)))(5, 4),
+        compile(Expr::Xor(Box::new(Expr::A), Box::new(Expr::B)))(5, 4),
         5 ^ 4
     );
     assert_eq!(
-        compile(Expr::Xor(Box::new(Expr::X), Box::new(Expr::Y)))(999, 2 * 2 * 2),
+        compile(Expr::Xor(Box::new(Expr::A), Box::new(Expr::B)))(999, 2 * 2 * 2),
         999 ^ (2 * 2 * 2)
     );
 }
@@ -234,11 +234,11 @@ fn test_xor() {
 #[test]
 fn test_sub() {
     assert_eq!(
-        compile(Expr::Sub(Box::new(Expr::X), Box::new(Expr::Y)))(5, 4),
+        compile(Expr::Sub(Box::new(Expr::A), Box::new(Expr::B)))(5, 4),
         5 - 4
     );
     assert_eq!(
-        compile(Expr::Sub(Box::new(Expr::X), Box::new(Expr::Y)))(999, 2 * 2 * 2),
+        compile(Expr::Sub(Box::new(Expr::A), Box::new(Expr::B)))(999, 2 * 2 * 2),
         (999 - (2 * 2 * 2)) % 255
     );
 }
@@ -246,18 +246,22 @@ fn test_sub() {
 #[test]
 fn test_add() {
     assert_eq!(
-        compile(Expr::Add(Box::new(Expr::X), Box::new(Expr::Y)))(5, 4),
+        compile(Expr::Add(Box::new(Expr::A), Box::new(Expr::B)))(5, 4),
         5 + 4
     );
     assert_eq!(
-        compile(Expr::Add(Box::new(Expr::X), Box::new(Expr::Y)))(999, 2 * 2 * 2),
+        compile(Expr::Add(Box::new(Expr::A), Box::new(Expr::B)))(999, 2 * 2 * 2),
         (999 + (2 * 2 * 2)) % 255
     );
 }
 
 fn get_until_ok<R: Rng>(rng: &mut R) -> (fn(u32, u32) -> u32) {
     loop {
-        let attempt = generate::get(rng);
+        let attempt = generate::get(rng).simplify();
+        if attempt == Expr::Zero {
+            continue;
+        }
+        println!("attempt: {:?}", attempt);
         //let (l, r) = attempt.info();
         // if l && r {
         return compile(attempt);
