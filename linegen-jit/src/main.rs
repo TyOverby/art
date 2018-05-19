@@ -16,6 +16,7 @@ use cretonne_simplejit::{SimpleJITBackend, SimpleJITBuilder};
 use rand::{random, Rng, SeedableRng, XorShiftRng};
 use std::fs::File;
 use std::io::BufWriter;
+use vectorphile::backend::DrawOptions;
 use vectorphile::svg::SvgBackend;
 use vectorphile::Canvas;
 
@@ -88,7 +89,7 @@ impl Expr {
                     Sub(Box::new(a), Box::new(b))
                 }
             }
-            add @ Add(_, _) => add,
+            Add(a, b) => Add(Box::new(a.simplify()), Box::new(b.simplify())),
         }
     }
 }
@@ -285,17 +286,30 @@ fn main() {
     let y2p = get_until_ok(&mut rng);
 
     let file = BufWriter::new(File::create(filename).unwrap());
-    let mut canvas = Canvas::new(SvgBackend::new_with_bb(file, 0.0, 0.0, 255.0, 255.0).unwrap());
+    let mut canvas = Canvas::new(SvgBackend::new_with_bb(file, 0.0, 0.0, 128.0, 128.0).unwrap());
 
-    for _ in 0..255 {
-        let x: u32 = rng.gen::<u32>() % 255;
-        let y: u32 = rng.gen::<u32>() % 255;
+    //for _ in 0..255 {
+    for x in 0..128{
+        for y in 0..128{
+            //let x: u32 = rng.gen::<u32>() % 255;
+            //let y: u32 = rng.gen::<u32>() % 255;
 
-        let x1 = x1p(x, y);
-        let x2 = x2p(x, y);
-        let y1 = y1p(x, y);
-        let y2 = y2p(x, y);
-        canvas.draw_line((x1, x2), (y1, y2), None).unwrap();
+            let x1 = x1p(x, y);
+            let x2 = x2p(x, y);
+            let y1 = y1p(x, y);
+            let y2 = y2p(x, y);
+            canvas
+                .draw_line(
+                    (x1, x2),
+                    (y1, y2),
+                    Some(DrawOptions {
+                        fill_color: None,
+                        stroke_color: Some((0, 0, 0)),
+                        stroke_size: 0.1,
+                    }),
+                )
+                .unwrap();
+        }
     }
 
     canvas.close().unwrap()

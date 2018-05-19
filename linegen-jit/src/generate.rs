@@ -22,11 +22,11 @@ pub(crate) fn get<'b, R: Rng>(rng: &'b mut R) -> Expr {
     return get_rand(
         &[
             (
-                3.0,
+                2.0,
                 Box::new(|_: &'b mut _| Expr::A) as Box<Fn(&'b mut R) -> Expr>,
             ),
             (
-                3.0,
+                2.0,
                 Box::new(|_: &'b mut _| Expr::B) as Box<Fn(&'b mut R) -> Expr>,
             ),
             (
@@ -45,12 +45,12 @@ pub(crate) fn get<'b, R: Rng>(rng: &'b mut R) -> Expr {
                     as Box<Fn(&'b mut R) -> Expr>,
             ),
             (
-                1.0,
+                0.0,
                 Box::new(|rng: &'b mut _| Expr::Add(Box::new(get(rng)), Box::new(get(rng))))
                     as Box<Fn(&'b mut R) -> Expr>,
             ),
             (
-                1.0,
+                0.0,
                 Box::new(|rng: &'b mut _| Expr::Sub(Box::new(get(rng)), Box::new(get(rng))))
                     as Box<Fn(&'b mut R) -> Expr>,
             ),
