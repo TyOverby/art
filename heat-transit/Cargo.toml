@@ -9,4 +9,5 @@ serde = ""
 serde_derive = ""
 astar = ""
 spade = ""
+ord_subset = ""
 png = { version = "", default-features = false, features = ["png-encoding"] }

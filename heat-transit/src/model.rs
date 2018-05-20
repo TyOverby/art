@@ -1,5 +1,6 @@
 use csv;
 use std::collections::HashMap;
+use std::ops::IndexMut;
 
 const ORIGIN_LAT: f64 = 47.6;
 const ORIGIN_LON: f64 = -122.33;
@@ -34,9 +35,10 @@ pub struct Stop {
     // Distances in km
     pub stop_x: f64,
     pub stop_y: f64,
+    pub name: String,
 }
 
-pub type Connections = HashMap<(StopId, StopId), Connection>;
+type Connections = HashMap<(StopId, StopId), Connection>;
 pub type PreConnections = HashMap<StopId, HashMap<StopId, Connection>>;
 pub type Stops = HashMap<StopId, Stop>;
 
@@ -45,11 +47,22 @@ struct RouteId(u32);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Connection {
-    time: u64,
+    pub time: f64,
     trip_id: u32,
 }
 
-pub fn read_connections() -> (Stops, Connections) {
+fn translate_connections(c: Connections) -> PreConnections {
+    let mut out = HashMap::new();
+    for ((start, stop), info) in c {
+        if !out.contains_key(&start) {
+            out.insert(start, HashMap::new());
+        }
+        out.get_mut(&start).unwrap().insert(stop, info);
+    }
+    out
+}
+
+pub fn read_connections() -> (Stops, PreConnections) {
     println!("reading connections");
     let mut stops = HashMap::new();
     for result in csv::Reader::from_path("stops.txt")
@@ -69,7 +82,7 @@ pub fn read_connections() -> (Stops, Connections) {
     }
     println!("done reading connections");
 
-    (stops, build_routes(&stop_times))
+    (stops, translate_connections(build_routes(&stop_times)))
 }
 
 fn build_routes(times: &[RawStopTime]) -> Connections {
@@ -104,14 +117,14 @@ fn build_routes(times: &[RawStopTime]) -> Connections {
                 let time = stop_two_time - stop_one_time;
                 // this overwites a bunch (since there's many times per trip)
                 let route_info = Connection {
-                    time: time,
+                    time: time as f64,
                     trip_id: trip_id,
                 };
 
                 match result.entry((StopId(stop_one.stop_id), StopId(stop_two.stop_id))) {
                     Occupied(ref mut entry) => {
                         let entry = entry.get_mut();
-                        if entry.time > time {
+                        if entry.time > time as f64 {
                             *entry = route_info;
                         }
                     }
@@ -148,18 +161,24 @@ fn parse_time(time: &str) -> u64 {
     hours * (60 * 60) + minutes * 60 + seconds
 }
 
+pub fn lat_lon_to_x_y(lat: f64, lon: f64) -> (f64, f64) {
+    let delta_lat = lat - ORIGIN_LAT;
+    let delta_lon = lon - ORIGIN_LON;
+    let skew = (ORIGIN_LAT * (::std::f64::consts::PI / 180.0)).cos(); // approx. 1.0/1.48
+    let x = delta_lon * skew * (40_075.0 / 360.0);
+    let y = delta_lat * (40_075.0 / 360.0);
+    (x, y)
+}
+
 impl Stop {
     fn new(raw_stop: RawStop) -> Self {
         // Convert lat/lon to km around an origin, assuming locally flat earth.
-        let delta_lat = raw_stop.stop_lat - ORIGIN_LAT;
-        let delta_lon = raw_stop.stop_lon - ORIGIN_LON;
-        let skew = (ORIGIN_LAT * (::std::f64::consts::PI / 180.0)).cos(); // approx. 1.0/1.48
-        let x = delta_lon * skew * (40_075.0 / 360.0);
-        let y = delta_lat * (40_075.0 / 360.0);
+        let (x, y) = lat_lon_to_x_y(raw_stop.stop_lat, raw_stop.stop_lon);
         Stop {
             stop_id: StopId(raw_stop.stop_id),
             stop_x: x,
             stop_y: y,
+            name: raw_stop.stop_name,
         }
     }
 }

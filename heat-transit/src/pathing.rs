@@ -1,5 +1,5 @@
 use astar::SearchProblem;
-use model::{Connections, StopId, Stops};
+use model::{lat_lon_to_x_y, PreConnections, StopId, Stops};
 use std::hash::{Hash, Hasher};
 
 const WALKING_SPEED: f64 = 0.0014;
@@ -8,11 +8,11 @@ const DRIVING_SPEED: f64 = 0.0178;
 fn travel_time((ax, ay): (f64, f64), (bx, by): (f64, f64), speed: f64) -> f64 {
     let dx = ax - bx;
     let dy = ay - by;
-    let distance = (dx * dx + dy + dy).sqrt();
-    (distance / speed)
+    let distance = (dx * dx + dy * dy).sqrt();
+    distance / speed
 }
 
-fn walking_time(s: (f64, f64), e: (f64, f64)) -> f64 {
+pub fn walking_time(s: (f64, f64), e: (f64, f64)) -> f64 {
     travel_time(s, e, WALKING_SPEED)
 }
 
@@ -21,16 +21,22 @@ fn driving_time(s: (f64, f64), e: (f64, f64)) -> f64 {
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
+pub enum HowGet {
+    Walk,
+    Bus,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Position {
-    BusStop(StopId),
+    BusStop(StopId, HowGet),
     Arbitrary(f64, f64),
 }
 
 impl Position {
-    fn get_coords(&self, stops: &Stops) -> (f64, f64) {
+    pub fn get_coords(&self, stops: &Stops) -> (f64, f64) {
         match self {
-            Position::Arbitrary(x, y) => (*x, *y),
-            Position::BusStop(id) => {
+            Position::Arbitrary(lat, lon) => lat_lon_to_x_y(*lat, *lon),
+            Position::BusStop(id, _) => {
                 let stop = &stops[id];
                 (stop.stop_x, stop.stop_y)
             }
@@ -45,7 +51,7 @@ impl Hash for Position {
         H: Hasher,
     {
         match self {
-            Position::BusStop(StopId(id)) => state.write_u32(*id),
+            Position::BusStop(StopId(id), _) => state.write_u32(*id),
             Position::Arbitrary(a, b) => {
                 state.write_u64(a.to_bits());
                 state.write_u64(b.to_bits());
@@ -56,7 +62,7 @@ impl Hash for Position {
 
 pub struct TransitSearchProblem<'a> {
     pub stops: &'a Stops,
-    pub connections: &'a Connections,
+    pub connections: &'a PreConnections,
     pub start: Position,
     pub end: Position,
 }
@@ -88,7 +94,16 @@ impl<'a> SearchProblem for TransitSearchProblem<'a> {
         // Walk to every bus stop
         for (id, stop) in self.stops {
             let walk_time = walking_time(cur_coords, (stop.stop_x, stop.stop_y));
-            neighbors.push((Position::BusStop(*id), walk_time))
+            neighbors.push((Position::BusStop(*id, HowGet::Walk), walk_time))
+        }
+
+        // If at a bus stop, travel to other things on the route
+        if let Position::BusStop(id, _) = cur {
+            if self.connections.contains_key(id) {
+                for (end, info) in &self.connections[id] {
+                    neighbors.push((Position::BusStop(*end, HowGet::Bus), info.time));
+                }
+            }
         }
 
         neighbors.into_iter()
