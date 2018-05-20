@@ -1,11 +1,12 @@
 [package]
 name = "transit-times"
 version = "0.1.0"
-authors = ["khyperia <khyperia@live.com>"]
+authors = ["khyperia <khyperia@live.com>", "Ty Overby <ty@pre-alpha.com>"]
 
 [dependencies]
 csv = ""
 serde = ""
 serde_derive = ""
+astar = ""
 spade = ""
 png = { version = "", default-features = false, features = ["png-encoding"] }

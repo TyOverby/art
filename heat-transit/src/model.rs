@@ -1,13 +1,11 @@
 use csv;
-use spade::rtree::RTree;
 use std::collections::HashMap;
-use std::error::Error;
 
 const ORIGIN_LAT: f64 = 47.6;
 const ORIGIN_LON: f64 = -122.33;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct StopId(u32);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct StopId(pub u32);
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 struct RawStop {
@@ -31,40 +29,28 @@ struct RawStopTime {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Stop {
-    stop_id: StopId,
+pub struct Stop {
+    pub stop_id: StopId,
     // Distances in km
-    stop_x: f64,
-    stop_y: f64,
+    pub stop_x: f64,
+    pub stop_y: f64,
 }
 
-#[derive(Clone)]
-struct Routes {
-    routes: HashMap<RouteId, RouteInfo>,
-}
-
-struct Stops {
-    stops: HashMap<StopId, Stop>,
-}
+pub type Connections = HashMap<(StopId, StopId), Connection>;
+pub type PreConnections = HashMap<StopId, HashMap<StopId, Connection>>;
+pub type Stops = HashMap<StopId, Stop>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct RouteId(u32);
 
-impl RouteId {
-    fn new(start: StopId, end: StopId) -> Self {
-        Self { start, end }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
-struct RouteInfo {
-    time: u32,
+pub struct Connection {
+    time: u64,
     trip_id: u32,
-    stops: Vec<StopId>,
 }
 
-fn read() -> (Stops, Routes) {
-    print!("Reading...");
+pub fn read_connections() -> (Stops, Connections) {
+    println!("reading connections");
     let mut stops = HashMap::new();
     for result in csv::Reader::from_path("stops.txt")
         .unwrap()
@@ -81,13 +67,14 @@ fn read() -> (Stops, Routes) {
     {
         stop_times.push(result);
     }
-    println!(" done.");
+    println!("done reading connections");
 
-    let routes = build_routes(&stops, &stop_times);
-    unimplemented!();
+    (stops, build_routes(&stop_times))
 }
 
-fn build_routes(stops: &HashMap<StopId, Stop>, times: &[RawStopTime]) -> Routes {
+fn build_routes(times: &[RawStopTime]) -> Connections {
+    use std::collections::hash_map::Entry::*;
+    println!("building routes...");
     let mut group_by_trip_id = HashMap::new();
     for stop in times {
         group_by_trip_id
@@ -96,12 +83,48 @@ fn build_routes(stops: &HashMap<StopId, Stop>, times: &[RawStopTime]) -> Routes 
             .push(stop.clone());
     }
 
-    let mut route = HashMap::new();
+    let mut result: Connections = HashMap::new();
 
-    for (trip_id, stops) in group_by_trip_id {
+    for (&trip_id, trip) in &group_by_trip_id {
+        for stop_one in trip {
+            for stop_two in trip {
+                if stop_one == stop_two {
+                    continue;
+                }
+
+                let stop_one_time = parse_time(&stop_one.arrival_time);
+                let stop_two_time = parse_time(&stop_two.arrival_time);
+                if stop_one.shape_dist_traveled >= stop_two.shape_dist_traveled
+                    || stop_one_time >= stop_two_time
+                {
+                    continue;
+                }
+
+                // Time can skip over midnight and go "backwards". Ignore those entries.
+                let time = stop_two_time - stop_one_time;
+                // this overwites a bunch (since there's many times per trip)
+                let route_info = Connection {
+                    time: time,
+                    trip_id: trip_id,
+                };
+
+                match result.entry((StopId(stop_one.stop_id), StopId(stop_two.stop_id))) {
+                    Occupied(ref mut entry) => {
+                        let entry = entry.get_mut();
+                        if entry.time > time {
+                            *entry = route_info;
+                        }
+                    }
+                    Vacant(entry) => {
+                        entry.insert(route_info);
+                    }
+                }
+            }
+        }
     }
 
-    unimplemented!();
+    println!("done building routes");
+    return result;
 }
 
 fn parse_time(time: &str) -> u64 {
@@ -138,19 +161,5 @@ impl Stop {
             stop_x: x,
             stop_y: y,
         }
-    }
-
-    fn fake(x: f64, y: f64) -> Self {
-        Self {
-            stop_id: StopId(0),
-            stop_x: x,
-            stop_y: y,
-        }
-    }
-}
-
-impl Stops {
-    fn new(stops: HashMap<StopId, Stop>) -> Self {
-        Self { stops }
     }
 }
