@@ -9,14 +9,16 @@ extern crate serde_derive;
 mod model;
 mod pathing;
 mod precache;
+mod draw;
+
 use model::lat_lon_to_x_y;
 use pathing::*;
 
 fn main() {
     let (stops, connections) = model::get_connections();
-    let cap_hill = Position::Arbitrary(47.616760, -122.318097);
-    let _uw = Position::Arbitrary(47.656016, -122.312520);
-    let ballard = Position::Arbitrary(47.668809, -122.382799);
+    let cap_hill = Position::LatLon(47.616760, -122.318097);
+    let _uw = Position::LatLon(47.656016, -122.312520);
+    let ballard = Position::LatLon(47.668809, -122.382799);
 
     let precache = precache::get_cache(&stops, &connections, ballard);
 
@@ -32,7 +34,12 @@ fn main() {
     let (path, _total_cost) = astar::astar(&mut searcher).unwrap();
     for (point, cost) in path {
         match point {
-            Position::Arbitrary(x, y) => println!(
+            Position::Custom(x, y) => println!(
+                "{} | Walk to {} {}",
+                cost,
+                x,
+                y),
+            Position::LatLon(x, y) => println!(
                 "{} | Walk to {} {} at {:?}",
                 cost,
                 x,

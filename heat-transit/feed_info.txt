@@ -1,2 +1,0 @@
-feed_id,feed_publisher_name,feed_publisher_url,feed_lang,feed_version
-1,Metro Transit,http://metro.kingcounty.gov,EN,MAY18_1_1

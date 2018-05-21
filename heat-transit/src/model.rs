@@ -80,7 +80,6 @@ fn read_connections() -> Result<(Stops, PreConnections), Box<Error>> {
 }
 
 fn build_connections() -> (Stops, PreConnections) {
-    println!("reading connections");
     let mut stops = HashMap::default();
     for result in csv::Reader::from_path("data/stops.txt")
         .unwrap()
@@ -97,7 +96,6 @@ fn build_connections() -> (Stops, PreConnections) {
     {
         stop_times.push(result);
     }
-    println!("done reading connections");
 
     let connections = translate_connections(build_routes(&stop_times));
 
@@ -115,7 +113,6 @@ fn build_connections() -> (Stops, PreConnections) {
 
 fn build_routes(times: &[RawStopTime]) -> Connections {
     use std::collections::hash_map::Entry::*;
-    println!("building routes...");
     let mut group_by_trip_id = HashMap::default();
     for stop in times {
         group_by_trip_id

@@ -32,13 +32,15 @@ pub enum HowGet {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Position {
     BusStop(StopId, HowGet),
-    Arbitrary(f64, f64),
+    LatLon(f64, f64),
+    Custom(f64, f64),
 }
 
 impl Position {
     pub fn get_coords(&self, stops: &Stops) -> (f64, f64) {
         match self {
-            Position::Arbitrary(lat, lon) => lat_lon_to_x_y(*lat, *lon),
+            Position::Custom(x, y) => (*x, *y),
+            Position::LatLon(lat, lon) => lat_lon_to_x_y(*lat, *lon),
             Position::BusStop(id, _) => {
                 let stop = &stops[id];
                 (stop.stop_x, stop.stop_y)
@@ -55,7 +57,11 @@ impl Hash for Position {
     {
         match self {
             Position::BusStop(StopId(id), _) => state.write_u32(*id),
-            Position::Arbitrary(a, b) => {
+            Position::LatLon(a, b) => {
+                state.write_u64(a.to_bits());
+                state.write_u64(b.to_bits());
+            }
+            Position::Custom(a, b) => {
                 state.write_u64(a.to_bits());
                 state.write_u64(b.to_bits());
             }
@@ -104,7 +110,6 @@ impl<'a> SearchProblem for TransitSearchProblem<'a> {
             neighbors.push((self.end, walk_time));
         }
 
-        
         // Walk to every bus stop
         for (id, stop) in self.stops {
             let walk_time = walking_time(cur_coords, (stop.stop_x, stop.stop_y));
