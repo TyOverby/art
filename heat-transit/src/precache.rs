@@ -13,15 +13,14 @@ fn build_cache(stops: &Stops, connections: &PreConnections, destination: Positio
     let mut searcher = TransitSearchProblem {
         stops: &stops,
         connections: &connections,
-        start: destination,
         end: destination,
         precache: HashMap::default(),
     };
 
     let total = stops.len();
     for (i, (id, _)) in stops.iter().enumerate() {
-        searcher.start = Position::BusStop(*id, HowGet::Walk);
-        let (_, total_cost) = astar(&mut searcher).unwrap();
+        let start = Position::BusStop(*id, HowGet::Walk);
+        let (_, total_cost) = astar(&mut searcher, start).unwrap();
         searcher.precache.insert(*id, total_cost);
         println!("{} / {}", i, total);
     }

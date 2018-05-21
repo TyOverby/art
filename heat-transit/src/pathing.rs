@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 const WALKING_SPEED: f64 = 0.0014;
 const DRIVING_SPEED: f64 = 0.0178;
 const BUS_WAIT_TIME: f64 = 7.5 * 60.0; // in seconds
-const MAX_WALK_TIME: f64 = 10.0 * 60.0; // in seconds
+const MAX_WALK_TIME: f64 = 60.0 * 60.0; // in seconds
 
 fn travel_time((ax, ay): (f64, f64), (bx, by): (f64, f64), speed: f64) -> f64 {
     let dx = ax - bx;
@@ -72,7 +72,6 @@ impl Hash for Position {
 pub struct TransitSearchProblem<'a> {
     pub stops: &'a Stops,
     pub connections: &'a PreConnections,
-    pub start: Position,
     pub end: Position,
     pub precache: RouteCache,
 }
@@ -81,9 +80,6 @@ impl<'a> SearchProblem for TransitSearchProblem<'a> {
     type Node = Position;
     type Cost = f64;
     type Iter = ::std::vec::IntoIter<(Position, Self::Cost)>;
-    fn start(&self) -> Self::Node {
-        self.start
-    }
     fn is_end(&self, a: &Self::Node) -> bool {
         a == &self.end
     }
