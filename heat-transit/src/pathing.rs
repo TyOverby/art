@@ -2,11 +2,12 @@ use astar::SearchProblem;
 use model::{lat_lon_to_x_y, PreConnections, StopId, Stops};
 use precache::RouteCache;
 use std::hash::{Hash, Hasher};
+use time::TimeCost;
 
 const WALKING_SPEED: f64 = 0.0014;
 const DRIVING_SPEED: f64 = 0.0178;
-const BUS_WAIT_TIME: f64 = 7.5 * 60.0; // in seconds
-const MAX_WALK_TIME: f64 = 60.0 * 60.0; // in seconds
+const BUS_WAIT_TIME: f32 = 7.5 * 60.0; // 7.5 minutes
+const MAX_WALK_TIME: f32 = 20.0 * 60.0; // 1 hour
 
 fn travel_time((ax, ay): (f64, f64), (bx, by): (f64, f64), speed: f64) -> f64 {
     let dx = ax - bx;
@@ -15,12 +16,12 @@ fn travel_time((ax, ay): (f64, f64), (bx, by): (f64, f64), speed: f64) -> f64 {
     distance / speed
 }
 
-pub fn walking_time(s: (f64, f64), e: (f64, f64)) -> f64 {
-    travel_time(s, e, WALKING_SPEED)
+pub fn walking_time(s: (f64, f64), e: (f64, f64)) -> TimeCost {
+    TimeCost::of_walking(travel_time(s, e, WALKING_SPEED) as f32)
 }
 
-fn driving_time(s: (f64, f64), e: (f64, f64)) -> f64 {
-    travel_time(s, e, DRIVING_SPEED)
+fn driving_time(s: (f64, f64), e: (f64, f64)) -> TimeCost {
+    TimeCost::of_bus(travel_time(s, e, DRIVING_SPEED) as f32)
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -78,7 +79,7 @@ pub struct TransitSearchProblem<'a> {
 
 impl<'a> SearchProblem for TransitSearchProblem<'a> {
     type Node = Position;
-    type Cost = f64;
+    type Cost = TimeCost;
     type Iter = ::std::vec::IntoIter<(Position, Self::Cost)>;
     fn is_end(&self, a: &Self::Node) -> bool {
         a == &self.end
@@ -95,21 +96,23 @@ impl<'a> SearchProblem for TransitSearchProblem<'a> {
         driving_time(g, p)
     }
 
-    fn neighbors(&self, cur: &Self::Node) -> Self::Iter {
+    fn neighbors(&self, cur: &Self::Node, cost: &Self::Cost) -> Self::Iter {
+        if cost.walk_time > MAX_WALK_TIME {
+            return vec![].into_iter();
+        }
+
         let mut neighbors = vec![];
         let end_coords = self.end.get_coords(&self.stops);
         let cur_coords = cur.get_coords(&self.stops);
 
         // Walk to the end
         let walk_time = walking_time(cur_coords, end_coords);
-        if walk_time < MAX_WALK_TIME {
-            neighbors.push((self.end, walk_time));
-        }
+        neighbors.push((self.end, walk_time));
 
         // Walk to every bus stop
         for (id, stop) in self.stops {
             let walk_time = walking_time(cur_coords, (stop.stop_x, stop.stop_y));
-            if walk_time < MAX_WALK_TIME {
+            if walk_time.walk_time < MAX_WALK_TIME {
                 neighbors.push((Position::BusStop(*id, HowGet::Walk), walk_time))
             }
         }
@@ -120,7 +123,7 @@ impl<'a> SearchProblem for TransitSearchProblem<'a> {
                 for (end, info) in &self.connections[id] {
                     neighbors.push((
                         Position::BusStop(*end, HowGet::Bus),
-                        info.time + BUS_WAIT_TIME,
+                        TimeCost::of_bus(info.time) + TimeCost::of_waiting(BUS_WAIT_TIME),
                     ));
                 }
             }

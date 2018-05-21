@@ -1,6 +1,7 @@
 extern crate astar;
 extern crate csv;
 extern crate fnv;
+extern crate num_traits;
 extern crate png;
 extern crate rayon;
 extern crate serde_json;
@@ -11,6 +12,7 @@ mod draw;
 mod model;
 mod pathing;
 mod precache;
+mod time;
 
 use pathing::*;
 

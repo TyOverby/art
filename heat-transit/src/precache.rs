@@ -6,8 +6,9 @@ use serde_json::{from_reader, to_writer_pretty};
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+use time::TimeCost;
 
-pub type RouteCache = HashMap<StopId, f64>;
+pub type RouteCache = HashMap<StopId, TimeCost>;
 
 fn build_cache(stops: &Stops, connections: &PreConnections, destination: Position) -> RouteCache {
     let mut searcher = TransitSearchProblem {

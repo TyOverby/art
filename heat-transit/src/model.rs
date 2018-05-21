@@ -50,7 +50,7 @@ struct RouteId(u32);
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Connection {
-    pub time: f64,
+    pub time: f32,
     trip_id: u32,
 }
 
@@ -142,14 +142,14 @@ fn build_routes(times: &[RawStopTime]) -> Connections {
                 let time = stop_two_time - stop_one_time;
                 // this overwites a bunch (since there's many times per trip)
                 let route_info = Connection {
-                    time: time as f64,
+                    time: time as f32,
                     trip_id: trip_id,
                 };
 
                 match result.entry((StopId(stop_one.stop_id), StopId(stop_two.stop_id))) {
                     Occupied(ref mut entry) => {
                         let entry = entry.get_mut();
-                        if entry.time > time as f64 {
+                        if entry.time > time as f32 {
                             *entry = route_info;
                         }
                     }
