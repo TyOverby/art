@@ -1,11 +1,14 @@
 use csv;
-use std::collections::HashMap;
-use std::ops::IndexMut;
+use fnv::FnvHashMap as HashMap;
+use serde_json::{from_reader, to_writer_pretty};
+use std::error::Error;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
 
 const ORIGIN_LAT: f64 = 47.6;
 const ORIGIN_LON: f64 = -122.33;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Deserialize, Serialize, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct StopId(pub u32);
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
@@ -29,7 +32,7 @@ struct RawStopTime {
     shape_dist_traveled: f64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Stop {
     pub stop_id: StopId,
     // Distances in km
@@ -45,27 +48,41 @@ pub type Stops = HashMap<StopId, Stop>;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct RouteId(u32);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Connection {
     pub time: f64,
     trip_id: u32,
 }
 
 fn translate_connections(c: Connections) -> PreConnections {
-    let mut out = HashMap::new();
+    let mut out = HashMap::default();
     for ((start, stop), info) in c {
         if !out.contains_key(&start) {
-            out.insert(start, HashMap::new());
+            out.insert(start, HashMap::default());
         }
         out.get_mut(&start).unwrap().insert(stop, info);
     }
     out
 }
 
-pub fn read_connections() -> (Stops, PreConnections) {
+pub fn get_connections() -> (Stops, PreConnections) {
+    read_connections().unwrap_or_else(|_| build_connections())
+}
+
+fn read_connections() -> Result<(Stops, PreConnections), Box<Error>> {
+    let file = BufReader::new(File::open("cache/stops.json")?);
+    let stops = from_reader(file)?;
+
+    let file = BufReader::new(File::open("cache/connections.json")?);
+    let connections = from_reader(file)?;
+
+    Ok((stops, connections))
+}
+
+fn build_connections() -> (Stops, PreConnections) {
     println!("reading connections");
-    let mut stops = HashMap::new();
-    for result in csv::Reader::from_path("stops.txt")
+    let mut stops = HashMap::default();
+    for result in csv::Reader::from_path("data/stops.txt")
         .unwrap()
         .into_deserialize()
     {
@@ -73,7 +90,7 @@ pub fn read_connections() -> (Stops, PreConnections) {
         stops.insert(StopId(result.stop_id), Stop::new(result));
     }
     let mut stop_times = Vec::new();
-    for result in csv::Reader::from_path("stop_times.txt")
+    for result in csv::Reader::from_path("data/stop_times.txt")
         .unwrap()
         .into_deserialize()
         .map(Result::unwrap)
@@ -82,13 +99,24 @@ pub fn read_connections() -> (Stops, PreConnections) {
     }
     println!("done reading connections");
 
-    (stops, translate_connections(build_routes(&stop_times)))
+    let connections = translate_connections(build_routes(&stop_times));
+
+    {
+        let file = BufWriter::new(File::create("cache/stops.json").unwrap());
+        to_writer_pretty(file, &stops).unwrap();
+    }
+    {
+        let file = BufWriter::new(File::create("cache/connections.json").unwrap());
+        to_writer_pretty(file, &connections).unwrap();
+    }
+
+    (stops, connections)
 }
 
 fn build_routes(times: &[RawStopTime]) -> Connections {
     use std::collections::hash_map::Entry::*;
     println!("building routes...");
-    let mut group_by_trip_id = HashMap::new();
+    let mut group_by_trip_id = HashMap::default();
     for stop in times {
         group_by_trip_id
             .entry(stop.trip_id)
@@ -96,7 +124,7 @@ fn build_routes(times: &[RawStopTime]) -> Connections {
             .push(stop.clone());
     }
 
-    let mut result: Connections = HashMap::new();
+    let mut result: Connections = HashMap::default();
 
     for (&trip_id, trip) in &group_by_trip_id {
         for stop_one in trip {

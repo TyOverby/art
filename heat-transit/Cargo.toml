@@ -4,10 +4,16 @@ version = "0.1.0"
 authors = ["khyperia <khyperia@live.com>", "Ty Overby <ty@pre-alpha.com>"]
 
 [dependencies]
-csv = ""
-serde = ""
-serde_derive = ""
-astar = ""
-spade = ""
-ord_subset = ""
-png = { version = "", default-features = false, features = ["png-encoding"] }
+csv = "1.*.*"
+serde = "1.*.*"
+serde_derive = "1.*.*"
+fnv = "1.*.*"
+serde_json = "1.*.*"
+
+[dependencies.png]
+version = "0.12.*"
+default-features = false
+ features = ["png-encoding"]
+
+[dependencies.astar]
+path = "../../rust/astar"
